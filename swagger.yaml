@@ -1,0 +1,1593 @@
+openapi: 3.0.3
+info:
+  title: Elasticsearch PoC API
+  description: |
+    A comprehensive Proof of Concept API for evaluating Elasticsearch as a search and analytics engine.
+    
+    This API provides endpoints for:
+    - Product management (CRUD operations)
+    - Advanced search capabilities with multiple query types
+    - Analytics and aggregations
+    - Performance testing and monitoring
+    
+    ## Features Tested
+    - Full-text search with relevance scoring
+    - Multi-field search across name, description, category
+    - Fuzzy search with auto-correction
+    - Wildcard and regex pattern matching
+    - Boolean queries with must/should/filter clauses
+    - Range filters for price, rating, dates
+    - Faceted search with aggregation-based filters
+    - Statistical and bucket aggregations
+    - Performance benchmarking and load testing
+    
+  version: 1.0.0
+  contact:
+    name: Lawsikho Team
+    email: support@lawsikho.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.example.com
+    description: Production server (example)
+
+tags:
+  - name: Health
+    description: Health check and system status
+  - name: Products
+    description: Product management operations
+  - name: Search
+    description: Advanced search and filtering
+  - name: Analytics
+    description: Data analytics and aggregations
+  - name: Performance
+    description: Performance testing and monitoring
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check application and Elasticsearch connection status
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "OK"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  elasticsearch:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        example: "green"
+                      cluster_name:
+                        type: string
+                        example: "elasticsearch-poc"
+                      number_of_nodes:
+                        type: integer
+                        example: 1
+                      active_shards:
+                        type: integer
+                        example: 1
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/products:
+    get:
+      tags:
+        - Products
+      summary: Get all products
+      description: Retrieve products with pagination and sorting
+      parameters:
+        - name: page
+          in: query
+          description: Page number (1-based)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: size
+          in: query
+          description: Number of products per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: sort
+          in: query
+          description: Field to sort by
+          required: false
+          schema:
+            type: string
+            enum: [name, price, rating, createdAt, updatedAt]
+            default: createdAt
+        - name: order
+          in: query
+          description: Sort order
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Products retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  total:
+                    type: integer
+                    example: 1000
+                  page:
+                    type: integer
+                    example: 1
+                  size:
+                    type: integer
+                    example: 10
+                  totalPages:
+                    type: integer
+                    example: 100
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Products
+      summary: Create new product
+      description: Create a new product in the system
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/products/{id}:
+    get:
+      tags:
+        - Products
+      summary: Get product by ID
+      description: Retrieve a specific product by its ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Product found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Products
+      summary: Update product
+      description: Update an existing product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '200':
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Products
+      summary: Delete product
+      description: Delete a product from the system
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Product deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Product deleted successfully"
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/products/bulk:
+    post:
+      tags:
+        - Products
+      summary: Bulk create products
+      description: Create multiple products in a single operation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                products:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ProductInput'
+                  maxItems: 1000
+              required:
+                - products
+      responses:
+        '200':
+          description: Bulk operation completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Bulk insert completed"
+                  total:
+                    type: integer
+                    example: 100
+                  errors:
+                    type: boolean
+                    example: false
+                  items:
+                    type: integer
+                    example: 100
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/products/stats:
+    get:
+      tags:
+        - Products
+      summary: Get index statistics
+      description: Retrieve Elasticsearch index statistics
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_documents:
+                    type: integer
+                    example: 1000
+                  index_size:
+                    type: integer
+                    example: 1048576
+                  shards:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 1
+                      successful:
+                        type: integer
+                        example: 1
+                      failed:
+                        type: integer
+                        example: 0
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/search:
+    post:
+      tags:
+        - Search
+      summary: Advanced search
+      description: Perform advanced search with multiple query types and filters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Search completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/search/suggest:
+    get:
+      tags:
+        - Search
+      summary: Get search suggestions
+      description: Get autocomplete suggestions for search queries
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query
+          schema:
+            type: string
+            minLength: 1
+        - name: field
+          in: query
+          description: Field to search in
+          schema:
+            type: string
+            enum: [name, description, category]
+            default: name
+      responses:
+        '200':
+          description: Suggestions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggestions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                          example: "smartphone"
+                        score:
+                          type: number
+                          example: 0.95
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/search/facets:
+    get:
+      tags:
+        - Search
+      summary: Get search facets
+      description: Get available facets for filtering search results
+      parameters:
+        - name: q
+          in: query
+          description: Optional search query to filter facets
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Facets retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacetsResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/search/related/{id}:
+    get:
+      tags:
+        - Search
+      summary: Find related products
+      description: Find products related to a specific product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: string
+            format: uuid
+        - name: size
+          in: query
+          description: Number of related products to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 5
+      responses:
+        '200':
+          description: Related products found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  related:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  source:
+                    $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/analytics/overview:
+    get:
+      tags:
+        - Analytics
+      summary: Get overview analytics
+      description: Get high-level analytics and statistics
+      responses:
+        '200':
+          description: Analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OverviewAnalytics'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/analytics/categories:
+    get:
+      tags:
+        - Analytics
+      summary: Get category distribution
+      description: Get analytics for product categories
+      parameters:
+        - name: size
+          in: query
+          description: Number of categories to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Category analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryAnalytics'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/analytics/price-distribution:
+    get:
+      tags:
+        - Analytics
+      summary: Get price distribution
+      description: Get analytics for product price distribution
+      responses:
+        '200':
+          description: Price analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceAnalytics'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/analytics/rating-distribution:
+    get:
+      tags:
+        - Analytics
+      summary: Get rating distribution
+      description: Get analytics for product rating distribution
+      responses:
+        '200':
+          description: Rating analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RatingAnalytics'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/analytics/trends:
+    get:
+      tags:
+        - Analytics
+      summary: Get time-based trends
+      description: Get analytics for time-based trends
+      parameters:
+        - name: interval
+          in: query
+          description: Time interval for trends
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: day
+        - name: size
+          in: query
+          description: Number of time periods to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+      responses:
+        '200':
+          description: Trends retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendsAnalytics'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/analytics/search-analytics:
+    get:
+      tags:
+        - Analytics
+      summary: Get search analytics
+      description: Get analytics for search performance
+      parameters:
+        - name: days
+          in: query
+          description: Number of days to analyze
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 7
+      responses:
+        '200':
+          description: Search analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchAnalytics'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/performance/load-test:
+    post:
+      tags:
+        - Performance
+      summary: Run load test
+      description: Run custom load tests with specified queries
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoadTestRequest'
+      responses:
+        '200':
+          description: Load test completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoadTestResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/performance/benchmark:
+    get:
+      tags:
+        - Performance
+      summary: Run benchmark tests
+      description: Run standard performance benchmark tests
+      parameters:
+        - name: size
+          in: query
+          description: Dataset size for benchmarking
+          schema:
+            type: integer
+            minimum: 100
+            maximum: 10000
+            default: 1000
+      responses:
+        '200':
+          description: Benchmark completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenchmarkResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/performance/index-stats:
+    get:
+      tags:
+        - Performance
+      summary: Get index statistics
+      description: Get detailed Elasticsearch index performance statistics
+      responses:
+        '200':
+          description: Index statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndexStats'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Product:
+      type: object
+      required:
+        - id
+        - name
+        - category
+        - price
+        - rating
+        - inStock
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique product identifier
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        name:
+          type: string
+          description: Product name
+          example: "Smart Wireless Headphones"
+        description:
+          type: string
+          description: Product description
+          example: "High-quality wireless headphones with noise cancellation"
+        category:
+          type: string
+          description: Product category
+          example: "Electronics"
+        price:
+          type: number
+          format: double
+          description: Product price
+          example: 299.99
+        rating:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 5
+          description: Product rating
+          example: 4.5
+        tags:
+          type: array
+          items:
+            type: string
+          description: Product tags
+          example: ["wireless", "premium", "noise-cancellation"]
+        inStock:
+          type: boolean
+          description: Product availability
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2024-01-01T00:00:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2024-01-01T00:00:00.000Z"
+        metadata:
+          type: object
+          properties:
+            brand:
+              type: string
+              example: "TechBrand"
+            color:
+              type: string
+              example: "Black"
+            size:
+              type: string
+              example: "M"
+            weight:
+              type: number
+              format: double
+              example: 1.5
+        _score:
+          type: number
+          description: Search relevance score
+          example: 0.95
+
+    ProductInput:
+      type: object
+      required:
+        - name
+        - category
+        - price
+        - rating
+        - inStock
+      properties:
+        name:
+          type: string
+          description: Product name
+          example: "Smart Wireless Headphones"
+        description:
+          type: string
+          description: Product description
+          example: "High-quality wireless headphones with noise cancellation"
+        category:
+          type: string
+          description: Product category
+          example: "Electronics"
+        price:
+          type: number
+          format: double
+          description: Product price
+          example: 299.99
+        rating:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 5
+          description: Product rating
+          example: 4.5
+        tags:
+          type: array
+          items:
+            type: string
+          description: Product tags
+          example: ["wireless", "premium", "noise-cancellation"]
+        inStock:
+          type: boolean
+          description: Product availability
+          example: true
+        metadata:
+          type: object
+          properties:
+            brand:
+              type: string
+              example: "TechBrand"
+            color:
+              type: string
+              example: "Black"
+            size:
+              type: string
+              example: "M"
+            weight:
+              type: number
+              format: double
+              example: 1.5
+
+    SearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: Search query
+          example: "smartphone"
+        filters:
+          type: object
+          properties:
+            category:
+              type: string
+              example: "Electronics"
+            priceMin:
+              type: number
+              format: double
+              example: 100
+            priceMax:
+              type: number
+              format: double
+              example: 500
+            rating:
+              type: number
+              format: double
+              example: 4.0
+            inStock:
+              type: boolean
+              example: true
+            tags:
+              type: array
+              items:
+                type: string
+              example: ["wireless", "premium"]
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+          description: Page number
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+          description: Results per page
+        sort:
+          type: string
+          enum: [name, price, rating, createdAt, updatedAt]
+          default: createdAt
+          description: Sort field
+        order:
+          type: string
+          enum: [asc, desc]
+          default: desc
+          description: Sort order
+        searchType:
+          type: string
+          enum: [multi_match, match_phrase, wildcard, fuzzy]
+          default: multi_match
+          description: Search query type
+
+    SearchResponse:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        total:
+          type: integer
+          description: Total number of results
+          example: 150
+        page:
+          type: integer
+          description: Current page number
+          example: 1
+        size:
+          type: integer
+          description: Results per page
+          example: 10
+        totalPages:
+          type: integer
+          description: Total number of pages
+          example: 15
+        searchType:
+          type: string
+          description: Search type used
+          example: "multi_match"
+        took:
+          type: integer
+          description: Search execution time in milliseconds
+          example: 25
+
+    FacetsResponse:
+      type: object
+      properties:
+        facets:
+          type: object
+          properties:
+            categories:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    example: "Electronics"
+                  doc_count:
+                    type: integer
+                    example: 150
+            price_ranges:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    example: "100-200"
+                  doc_count:
+                    type: integer
+                    example: 75
+            ratings:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    example: "4-5"
+                  doc_count:
+                    type: integer
+                    example: 100
+            tags:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    example: "wireless"
+                  doc_count:
+                    type: integer
+                    example: 50
+            in_stock:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    example: "true"
+                  doc_count:
+                    type: integer
+                    example: 120
+        total:
+          type: integer
+          description: Total number of documents
+          example: 1000
+
+    OverviewAnalytics:
+      type: object
+      properties:
+        total_products:
+          type: integer
+          description: Total number of products
+          example: 1000
+        price_stats:
+          type: object
+          properties:
+            average:
+              type: number
+              format: double
+              example: 299.99
+            min:
+              type: number
+              format: double
+              example: 10.00
+            max:
+              type: number
+              format: double
+              example: 999.99
+        average_rating:
+          type: number
+          format: double
+          example: 4.2
+        stock_status:
+          type: object
+          properties:
+            in_stock:
+              type: integer
+              example: 850
+            out_of_stock:
+              type: integer
+              example: 150
+
+    CategoryAnalytics:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+                example: "Electronics"
+              count:
+                type: integer
+                example: 150
+              avg_price:
+                type: number
+                format: double
+                example: 299.99
+              avg_rating:
+                type: number
+                format: double
+                example: 4.2
+              in_stock_count:
+                type: integer
+                example: 120
+              in_stock_percentage:
+                type: integer
+                example: 80
+
+    PriceAnalytics:
+      type: object
+      properties:
+        price_ranges:
+          type: array
+          items:
+            type: object
+            properties:
+              range:
+                type: string
+                example: "$100 - $200"
+              count:
+                type: integer
+                example: 75
+              avg_rating:
+                type: number
+                format: double
+                example: 4.1
+              in_stock_count:
+                type: integer
+                example: 60
+        histogram:
+          type: array
+          items:
+            type: object
+            properties:
+              price:
+                type: number
+                format: double
+                example: 150
+              count:
+                type: integer
+                example: 25
+
+    RatingAnalytics:
+      type: object
+      properties:
+        rating_ranges:
+          type: array
+          items:
+            type: object
+            properties:
+              range:
+                type: string
+                example: "4 - 5"
+              count:
+                type: integer
+                example: 100
+              avg_price:
+                type: number
+                format: double
+                example: 350.00
+              in_stock_count:
+                type: integer
+                example: 85
+        top_rated:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: "Premium Smartphone"
+              count:
+                type: integer
+                example: 5
+              avg_rating:
+                type: number
+                format: double
+                example: 4.8
+              avg_price:
+                type: number
+                format: double
+                example: 599.99
+
+    TrendsAnalytics:
+      type: object
+      properties:
+        trends:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+                example: "2024-01-01"
+              timestamp:
+                type: integer
+                example: 1704067200000
+              count:
+                type: integer
+                example: 10
+              avg_price:
+                type: number
+                format: double
+                example: 299.99
+              avg_rating:
+                type: number
+                format: double
+                example: 4.2
+              top_categories:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    category:
+                      type: string
+                      example: "Electronics"
+                    count:
+                      type: integer
+                      example: 5
+
+    SearchAnalytics:
+      type: object
+      properties:
+        period_days:
+          type: integer
+          example: 7
+        total_searches:
+          type: integer
+          example: 500
+        top_search_terms:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+                example: "smartphone"
+              doc_count:
+                type: integer
+                example: 50
+        categories_searched:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+                example: "Electronics"
+              doc_count:
+                type: integer
+                example: 200
+        price_ranges_searched:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+                example: "100-200"
+              doc_count:
+                type: integer
+                example: 150
+
+    LoadTestRequest:
+      type: object
+      required:
+        - queries
+      properties:
+        queries:
+          type: array
+          items:
+            type: object
+            description: Elasticsearch query object
+          minItems: 1
+          maxItems: 10
+        iterations:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+          description: Number of test iterations
+        concurrent:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 5
+          description: Number of concurrent requests
+        testType:
+          type: string
+          enum: [search, index, get]
+          default: search
+          description: Type of test to run
+
+    LoadTestResponse:
+      type: object
+      properties:
+        testType:
+          type: string
+          example: "search"
+        iterations:
+          type: integer
+          example: 10
+        concurrent:
+          type: integer
+          example: 5
+        totalQueries:
+          type: integer
+          example: 5
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        statistics:
+          type: object
+          properties:
+            totalQueries:
+              type: integer
+              example: 50
+            successfulQueries:
+              type: integer
+              example: 48
+            failedQueries:
+              type: integer
+              example: 2
+            successRate:
+              type: number
+              format: double
+              example: 96.0
+            averageDuration:
+              type: number
+              format: double
+              example: 25.5
+            minDuration:
+              type: integer
+              example: 15
+            maxDuration:
+              type: integer
+              example: 45
+            p50Duration:
+              type: integer
+              example: 23
+            p90Duration:
+              type: integer
+              example: 35
+            p95Duration:
+              type: integer
+              example: 40
+            p99Duration:
+              type: integer
+              example: 44
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              iteration:
+                type: integer
+                example: 1
+              queries:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    query:
+                      type: integer
+                      example: 1
+                    success:
+                      type: boolean
+                      example: true
+                    duration:
+                      type: integer
+                      example: 25
+                    responseSize:
+                      type: integer
+                      example: 1024
+                    hits:
+                      type: integer
+                      example: 10
+                    took:
+                      type: integer
+                      example: 20
+
+    BenchmarkResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        tests:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: "Simple Match Query"
+              success:
+                type: boolean
+                example: true
+              duration:
+                type: integer
+                example: 25
+              elasticsearchTook:
+                type: integer
+                example: 20
+              totalHits:
+                type: integer
+                example: 150
+              responseSize:
+                type: integer
+                example: 1024
+        summary:
+          type: object
+          properties:
+            totalTests:
+              type: integer
+              example: 6
+            successfulTests:
+              type: integer
+              example: 6
+            failedTests:
+              type: integer
+              example: 0
+            averageDuration:
+              type: number
+              format: double
+              example: 28.5
+            minDuration:
+              type: integer
+              example: 15
+            maxDuration:
+              type: integer
+              example: 45
+
+    IndexStats:
+      type: object
+      properties:
+        index:
+          type: object
+          properties:
+            name:
+              type: string
+              example: "products"
+            total_documents:
+              type: integer
+              example: 1000
+            deleted_documents:
+              type: integer
+              example: 0
+            index_size_bytes:
+              type: integer
+              example: 1048576
+            index_size_mb:
+              type: number
+              format: double
+              example: 1.0
+        shards:
+          type: object
+          properties:
+            total:
+              type: integer
+              example: 1
+            successful:
+              type: integer
+              example: 1
+            failed:
+              type: integer
+              example: 0
+        primaries:
+          type: object
+          properties:
+            documents:
+              type: integer
+              example: 1000
+            size_bytes:
+              type: integer
+              example: 1048576
+            size_mb:
+              type: number
+              format: double
+              example: 1.0
+        search:
+          type: object
+          properties:
+            query_total:
+              type: integer
+              example: 500
+            query_time_ms:
+              type: integer
+              example: 1250
+            fetch_total:
+              type: integer
+              example: 500
+            fetch_time_ms:
+              type: integer
+              example: 750
+        indexing:
+          type: object
+          properties:
+            index_total:
+              type: integer
+              example: 1000
+            index_time_ms:
+              type: integer
+              example: 2000
+            index_current:
+              type: integer
+              example: 0
+
+    Error:
+      type: object
+      required:
+        - error
+        - timestamp
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Internal Server Error"
+        message:
+          type: string
+          description: Detailed error message
+          example: "Something went wrong"
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+          example: "2024-01-01T00:00:00.000Z"
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+
+security:
+  - ApiKeyAuth: []
