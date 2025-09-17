@@ -59,7 +59,33 @@ class ElasticsearchService {
                   custom_analyzer: {
                     type: 'custom',
                     tokenizer: 'standard',
-                    filter: ['lowercase', 'stop', 'snowball']
+                    filter: ['lowercase', 'stop', 'snowball', 'synonym_filter']
+                  },
+                  keyword_analyzer: {
+                    type: 'custom',
+                    tokenizer: 'keyword',
+                    filter: ['lowercase']
+                  },
+                  autocomplete_analyzer: {
+                    type: 'custom',
+                    tokenizer: 'standard',
+                    filter: ['lowercase', 'autocomplete_filter']
+                  }
+                },
+                filter: {
+                  synonym_filter: {
+                    type: 'synonym',
+                    synonyms: [
+                      'smartphone,phone,mobile',
+                      'laptop,notebook,computer',
+                      'headphones,earphones,earbuds',
+                      'wireless,bluetooth,wi-fi'
+                    ]
+                  },
+                  autocomplete_filter: {
+                    type: 'edge_ngram',
+                    min_gram: 1,
+                    max_gram: 20
                   }
                 }
               }
@@ -71,12 +97,19 @@ class ElasticsearchService {
                   type: 'text',
                   analyzer: 'custom_analyzer',
                   fields: {
-                    keyword: { type: 'keyword' }
+                    keyword: { type: 'keyword' },
+                    autocomplete: { 
+                      type: 'text',
+                      analyzer: 'autocomplete_analyzer'
+                    }
                   }
                 },
                 description: { 
                   type: 'text',
-                  analyzer: 'custom_analyzer'
+                  analyzer: 'custom_analyzer',
+                  fields: {
+                    keyword: { type: 'keyword' }
+                  }
                 },
                 category: { 
                   type: 'keyword',

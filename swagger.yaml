@@ -46,6 +46,10 @@ tags:
     description: Data analytics and aggregations
   - name: Performance
     description: Performance testing and monitoring
+  - name: Analyzers
+    description: Text analyzer testing and comparison
+  - name: Aggregations
+    description: Advanced aggregation queries and analytics
 
 paths:
   /health:
@@ -782,6 +786,253 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IndexStats'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/analyzers/test:
+    post:
+      tags:
+        - Analyzers
+      summary: Test text analyzer
+      description: Test how different text analyzers process and tokenize text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: Text to analyze
+                  example: "Wireless Bluetooth Headphones"
+                analyzer:
+                  type: string
+                  description: Analyzer to use
+                  enum: [custom_analyzer, keyword_analyzer, autocomplete_analyzer, standard]
+                  default: custom_analyzer
+                field:
+                  type: string
+                  description: Field to search in
+                  default: name
+              required:
+                - text
+      responses:
+        '200':
+          description: Analysis results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  input:
+                    type: object
+                    properties:
+                      text:
+                        type: string
+                      analyzer:
+                        type: string
+                      field:
+                        type: string
+                  analysis:
+                    type: object
+                    properties:
+                      tokens:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            token:
+                              type: string
+                            start_offset:
+                              type: integer
+                            end_offset:
+                              type: integer
+                            type:
+                              type: string
+                            position:
+                              type: integer
+                  search_results:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      products:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            score:
+                              type: number
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/analyzers/available:
+    get:
+      tags:
+        - Analyzers
+      summary: Get available analyzers
+      description: List all available text analyzers and their configurations
+      responses:
+        '200':
+          description: Available analyzers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  analyzers:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        description:
+                          type: string
+                        filters:
+                          type: array
+                          items:
+                            type: string
+                        tokenizer:
+                          type: string
+                  usage:
+                    type: object
+                    properties:
+                      endpoint:
+                        type: string
+                      body:
+                        type: object
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/aggregations/custom:
+    post:
+      tags:
+        - Aggregations
+      summary: Run custom aggregation query
+      description: Execute a custom Elasticsearch aggregation query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: object
+                  description: Elasticsearch aggregation query
+                  example:
+                    aggs:
+                      categories:
+                        terms:
+                          field: category
+                          size: 10
+                    size: 0
+              required:
+                - query
+      responses:
+        '200':
+          description: Aggregation results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: object
+                  execution_time:
+                    type: integer
+                    description: Query execution time in milliseconds
+                  aggregations:
+                    type: object
+                    description: Aggregation results
+                  total_documents:
+                    type: integer
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/aggregations/categories:
+    get:
+      tags:
+        - Aggregations
+      summary: Category distribution analysis
+      description: Get detailed category distribution with statistics
+      parameters:
+        - name: size
+          in: query
+          description: Number of categories to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: order
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Category analysis results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  execution_time:
+                    type: integer
+                  categories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        category:
+                          type: string
+                        count:
+                          type: integer
+                        avg_price:
+                          type: number
+                        avg_rating:
+                          type: number
+                        min_price:
+                          type: number
+                        max_price:
+                          type: number
+                        in_stock_count:
+                          type: integer
+                        in_stock_percentage:
+                          type: integer
         '500':
           description: Internal server error
           content:

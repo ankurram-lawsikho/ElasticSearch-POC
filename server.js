@@ -1,3 +1,4 @@
+require('newrelic');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -9,6 +10,9 @@ const productRoutes = require('./routes/products');
 const searchRoutes = require('./routes/search');
 const analyticsRoutes = require('./routes/analytics');
 const performanceRoutes = require('./routes/performance');
+const uploadRoutes = require('./routes/upload');
+const analyzerRoutes = require('./routes/analyzers');
+const aggregationRoutes = require('./routes/aggregations');
 const { setupSwagger } = require('./config/swagger');
 
 const app = express();
@@ -47,6 +51,9 @@ app.use('/api/products', productRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/performance', performanceRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/analyzers', analyzerRoutes);
+app.use('/api/aggregations', aggregationRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
